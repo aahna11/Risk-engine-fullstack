@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Risk & Position Sizing Engine</title>
+<style>
+:root{color-scheme:dark;--bg:#0a0a0b;--glass:rgba(255,255,255,.07);--bd:rgba(255,255,255,.2);--tx:#f4f4f2;--mu:#a9acb3;--gold:#e6e8ec;--pu:#ff2d3d;--or:#ff6a5c;--rd:#ff5d6c;--gr:#6ee7a0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:radial-gradient(ellipse at 50% 120%,#7a0010 0,#2a0308 35%,#0a0a0b 70%);color:var(--tx);font:15px/1.5 "Helvetica Neue",Arial,sans-serif;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;background-image:linear-gradient(var(--bd) 1px,transparent 1px),linear-gradient(90deg,var(--bd) 1px,transparent 1px);background-size:180px 180px;opacity:.25}
+#gl{position:fixed;inset:0;z-index:0;width:100%;height:100%}
+nav{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:5;display:flex;gap:8px;align-items:center;padding:12px 18px;flex-wrap:wrap}
+nav b{letter-spacing:.3em;margin-right:auto;font-weight:600}
+button,input,select{font:inherit;color:var(--tx)}
+button{background:var(--glass);border:1px solid var(--bd);border-radius:999px;padding:9px 18px;cursor:pointer;backdrop-filter:blur(12px)}
+button.p{background:#f4f4f2;color:#0a0a0b;border:0;font-weight:600}
+button:hover{border-color:var(--pu);box-shadow:0 0 18px rgba(255,45,61,.35)}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--pu);outline-offset:2px}
+button:disabled{opacity:.4;cursor:not-allowed}
+main{position:relative;z-index:2;padding:76px 18px 40px;max-width:1100px;margin:auto}
+section{display:none}section.on{display:block}
+.card{background:var(--glass);border:1px solid var(--bd);border-radius:24px;padding:20px;backdrop-filter:blur(18px);margin-bottom:16px}
+h1{font-size:clamp(2.4rem,7vw,4.8rem);line-height:1.02;margin:.2em 0;font-weight:300}
+h1 i{font-family:Georgia,"Times New Roman",serif;font-weight:400}h1 b{color:var(--pu)}
+h2{font-weight:400;margin:0 0 10px}small,.mu{color:var(--mu)}
+.hero{min-height:72vh;display:flex;flex-direction:column;justify-content:center;max-width:560px}
+.tiles{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.tiles span{background:var(--glass);border:1px solid var(--bd);border-radius:16px;padding:10px 14px;backdrop-filter:blur(14px)}
+.deg{position:absolute;right:6%;bottom:6%;color:var(--mu);letter-spacing:.2em}
+.hint{background:rgba(255,45,61,.15);border:1px solid var(--pu);border-radius:12px;padding:8px 12px;font-weight:600}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.m{font-size:1.6rem;font-weight:600}.m small{display:block;font-size:.75rem;font-weight:400;text-transform:uppercase;letter-spacing:.08em}
+label{display:block;margin:8px 0;color:var(--mu);font-size:.85rem}
+input,select{width:100%;background:rgba(0,0,0,.4);border:1px solid var(--bd);border-radius:12px;padding:9px}
+.err{color:var(--rd)}.ok{color:var(--gr)}
+.bar{height:10px;background:rgba(255,255,255,.12);border-radius:9px;overflow:hidden}.bar div{height:100%;width:0;background:linear-gradient(90deg,#f4f4f2,var(--pu));transition:width .2s}
+.btc{font-size:4rem;display:inline-block;animation:sp 1.2s linear infinite}@keyframes sp{to{transform:rotateY(360deg)}}
+@media(prefers-reduced-motion:reduce){.btc{animation:none}}
+canvas.ch{width:100%;height:170px;display:block}
+table{width:100%;border-collapse:collapse;font-size:.85rem}td,th{padding:5px;border-bottom:1px solid var(--bd);text-align:left}
+.tab{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.ind div{width:35%!important;animation:ind 1s ease-in-out infinite alternate}@keyframes ind{to{margin-left:65%}}.msg{min-height:1.4em}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.card{background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.35);box-shadow:0 18px 50px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.35)}
+h1 b{color:transparent;-webkit-text-stroke:1.5px #fff;text-shadow:0 0 30px rgba(255,45,61,.6)}
+body::after{content:"RISK";position:fixed;right:-2vw;bottom:-6vw;z-index:0;font:900 28vw/1 "Helvetica Neue",Arial,sans-serif;color:rgba(255,255,255,.035);pointer-events:none;letter-spacing:-.04em}
+.rot{display:flex;gap:10px;align-items:center;margin-top:18px;max-width:420px;background:var(--glass);border:1px solid var(--bd);border-radius:999px;padding:8px 16px;backdrop-filter:blur(14px)}
+.rot input{padding:0;border:0;background:none;accent-color:#ff2d3d}.rot span{white-space:nowrap;letter-spacing:.15em;font-size:.8rem;color:var(--mu)}
+</style></head><body>
+<canvas id="gl" aria-hidden="true"></canvas>
+<nav><b>RISK ENGINE</b><button data-go="landing">Home</button><button data-go="dash">Dashboard</button><button data-go="sizing">Position Sizing</button><button data-go="killsw">Kill Switch</button><button data-go="activity">Activity</button><button data-go="method">Method</button><button data-go="upload">Upload</button><button id="auth-btn" data-go="auth">Login</button></nav>
+<main>
+<section id="landing" class="on"><div class="hero"><small>RISK · POSITION SIZE · KILL SWITCH</small><h1><i>Digital</i> risk<br>meets real <b>control.</b></h1><p class="mu">Upload OHLC data and get ATR stops, fixed-fractional sizing, Kelly, historical VaR and a daily-loss kill switch for simulated trades. Move your cursor through the particles.</p><div><button class="p" data-go="auth">Start sizing →</button> <button id="demo-go">Load Demo Data</button></div><div class="rot"><span>ROTATE 0–180°</span><input id="rot" type="range" min="0" max="180" value="0" aria-label="Rotate 3D coin stack"><button id="autoSpin" type="button">Auto</button></div><div class="tiles"><span>Compare value.</span><span>Size positions.</span><span>Cap daily loss.</span></div></div><div class="deg" id="degv">180°</div></section>
+
+<section id="auth"><div class="card" style="max-width:420px;margin:auto"><h2 id="auth-t">Sign up</h2>
+<div class="tab"><button id="t-su">Sign up</button><button id="t-li">Log in</button></div>
+<label for="em">Email</label><input id="em" type="email" autocomplete="email">
+<label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
+<p id="auth-e" class="err" role="alert"></p><button class="p" id="auth-go">Continue</button>
+<p><b>password = Risktrading101</b></p><p class="hint">Demo: password = Risktrading101</p><p><small>Demo-only signup restriction for the academic assignment, not a production policy.</small></p></div></section>
+
+<section id="upload"><div class="card"><h2>Upload dataset</h2><p class="mu">CSV with header <code>date,open,high,low,close</code> (date as YYYY-MM-DD). Max ~5 MB. Validated and stored by the server.</p>
+<input type="file" id="file" accept=".csv,text/csv"><p id="up-e" class="err" role="alert"></p>
+<div id="prog" style="display:none;text-align:center"><div class="btc">₿</div><p id="stage">Reading…</p><div class="bar"><div id="pb"></div></div></div>
+<p id="done" class="ok" style="font-size:1.3rem;font-weight:600"></p></div></section>
+
+<section id="dash"><div id="dash-empty" class="card"><h2>No dataset yet</h2><p class="mu">Upload a CSV or explicitly choose demo data.</p><button class="p" data-go="upload">Upload CSV</button> <button id="demo2">Load Demo Data</button></div>
+<div id="dash-body" style="display:none">
+<div class="card"><small id="src"></small><p id="warn" class="mu"></p>
+<div class="grid"><label>Dataset<select id="ds"></select></label><label>ATR period<input id="atrN" type="number" min="2" max="100" value="14"></label><label>Stop multiplier<input id="mult" type="number" min="0.1" step="0.1" value="2"></label><label>Direction<select id="dir"><option>long</option><option>short</option></select></label><label>VaR confidence<select id="conf"><option value="0.95">95%</option><option value="0.99">99%</option><option value="0.9">90%</option></select></label><label>Account equity<input id="eq" type="number" min="1" value="100000"></label><label>Daily loss limit %<input id="lim" type="number" min="0.1" step="0.1" value="2"></label></div>
+<div class="row"><button id="save">Save analysis</button><button id="del">Delete dataset</button><span id="dmsg" class="msg" role="status"></span></div></div>
+<p id="derr" class="err" role="alert"></p>
+<div class="grid" id="metrics"></div>
+<div class="card"><h2>Close price</h2><canvas class="ch" id="c1"></canvas></div>
+<div class="grid">
+<div class="card"><h2>Position sizing</h2><label>Risk % of equity<input id="rk" type="number" min="0.01" max="100" step="0.1" value="1"></label><label>Entry price (blank = last close)<input id="en" type="number" step="any"></label><label>Kelly fraction<select id="kf"><option value="1">Full</option><option value="0.5" selected>Half</option><option value="0.25">Quarter</option></select></label><div id="sz"></div></div>
+<div class="card"><h2>Kill switch (simulated trades)</h2><label>Simulated trade P&L<input id="pnl" type="number" step="any" value="-500"></label><div class="row"><button class="p" id="trade">Submit simulated trade</button><button id="reset">Reset</button></div><p id="ks" role="status"></p><p><small>Enforced by the backend for this app's simulated trades only. It cannot cancel real broker orders. Day = UTC date.</small></p></div></div>
+<div class="card"><h2>Activity &amp; risk events</h2><table id="log"></table></div>
+</div></section>
+<section id="sizing"><h1 style="font-size:2.4rem">Position <b>sizing</b></h1><p class="mu">ATR stop, fixed-fractional size and Kelly for the selected dataset. Change ATR period, multiplier, equity and dataset on the <a href="#dash" style="color:#ff6a5c">Dashboard</a>; results here update from the same backend analysis.</p><div id="sizing-host"></div></section>
+<section id="killsw"><h1 style="font-size:2.4rem">Kill <b>switch</b></h1><p class="mu">Daily-loss protection for simulated trades, enforced by the backend.</p><div id="kill-host"></div></section>
+<section id="activity"><h1 style="font-size:2.4rem">Activity <b>log</b></h1><p class="mu">Your latest recorded events (login, uploads, saved analyses, risk events).</p><div id="act-host"></div></section>
+<section id="method"><h1 style="font-size:2.4rem">Methodology</h1><div class="card"><h2>Formulas</h2><p><b>ATR (Wilder):</b> TR = max(H-L, |H-prevC|, |L-prevC|); first ATR = mean of first n TR; ATR = (prev x (n-1) + TR) / n. Stop = entry -/+ multiplier x ATR.</p><p><b>Fixed-fractional size:</b> (equity x risk%) / |entry - stop|.</p><p><b>Kelly:</b> p - (1-p)/b, b = average win / average loss. Full Kelly is very volatile; use half or quarter Kelly.</p><p><b>Historical VaR:</b> percentile of close-to-close returns applied to equity. It is not a maximum loss.</p><p><b>Kill switch:</b> UTC day P&amp;L of simulated trades; triggers at P&amp;L &lt;= -(equity x limit%); blocks new simulated trades on the server. It cannot cancel real broker orders.</p></div><div class="card"><h2>CSV format</h2><p>Header <code>date,open,high,low,close</code>, dates YYYY-MM-DD, at least 20 valid rows, max ~5 MB.</p></div></section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+let user=null,camT={x:0,y:0,z:9};
+const cams={landing:[0,0,9],auth:[0,0,9],upload:[0,0,9],dash:[0,0,10],sizing:[0,0,10],killsw:[0,0,10],activity:[0,0,10],method:[0,0,9]},poses={landing:[2.6,0,1],auth:[-3.6,0,.8],upload:[3.4,0,.8],dash:[5.2,-2.8,.5],sizing:[5.2,-2.8,.5],killsw:[5.2,-2.8,.5],activity:[5.2,-2.8,.5],method:[3.4,0,.8]};let heroT={x:2.6,y:0,s:1};
+async function api(p,o={}){const r=await fetch('/api'+p,{method:o.method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'risk-engine'},body:o.body?JSON.stringify(o.body):undefined});let d={};try{d=await r.json()}catch(e){}
+if(!r.ok){const e=new Error(d.error||'Request failed ('+r.status+')');e.status=r.status;throw e}return d}
+function go(r){if(r!=='landing'&&r!=='auth'&&r!=='method'&&!user){r='auth';$('#auth-e').textContent='Please log in first.'}
+$$('section').forEach(s=>s.classList.toggle('on',s.id===r));camT={x:cams[r][0],y:cams[r][1],z:cams[r][2]};heroT={x:poses[r][0],y:poses[r][1],s:poses[r][2]};const q={landing:[4.6,-2.5,.5],auth:[3.8,0,.9],upload:[-3.8,0,.8],dash:[-6.2,3.2,.4],sizing:[-6.2,3.2,.4],killsw:[-6.2,3.2,.4],activity:[-6.2,3.2,.4],method:[-3.8,0,.8]}[r]||[4.6,-2.5,.5];if(window.watchT){watchT.x=q[0];watchT.y=q[1];watchT.s=q[2];window.cityOn=r==='dash'||r==='sizing'||r==='killsw'||r==='activity'}
+location.hash=r;window.scrollTo(0,0);if(['dash','sizing','killsw','activity'].includes(r))loadDash().then(()=>{if(r!=='dash'&&!DS.length)go('dash')})}
+$$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+(function(){try{const cv=$('#gl'),R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});R.setPixelRatio(Math.min(devicePixelRatio,2));
+const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(50,1,.1,100);cam.position.z=9;
+sc.add(new THREE.AmbientLight(0xffffff,.55));const l1=new THREE.PointLight(0xff2d3d,3.5,40);l1.position.set(-4,-3,5);const l2=new THREE.PointLight(0xffffff,2.4,40);l2.position.set(5,4,6);sc.add(l1,l2);
+const hero=new THREE.Group(),arcG=new THREE.Group();hero.add(arcG);sc.add(hero);
+const sil=new THREE.MeshStandardMaterial({color:0xdfe3ea,metalness:1,roughness:.18}),red=new THREE.MeshStandardMaterial({color:0xff2d3d,emissive:0x8a0010,metalness:.6,roughness:.3}),cg=new THREE.CylinderGeometry(1.3,1.3,.26,64),rg=new THREE.TorusGeometry(1.3,.08,12,64),ig=new THREE.TorusGeometry(.95,.035,8,48);
+for(let i=0;i<7;i++){const c=new THREE.Group(),b=new THREE.Mesh(cg,sil),r1=new THREE.Mesh(rg,sil),r2=new THREE.Mesh(ig,i%3===1?sil:red);r1.rotation.x=r2.rotation.x=Math.PI/2;r1.position.y=0;r2.position.y=.14;c.add(b,r1,r2);c.rotation.x=Math.PI/2;const p=new THREE.Group();p.add(c);p.rotation.y=(i-3)*.3;p.position.x=(i-3)*.2;hero.add(p)}
+const arc=new THREE.Mesh(new THREE.TorusGeometry(2.7,.012,8,128,Math.PI),new THREE.MeshBasicMaterial({color:0xffffff}));arc.rotation.z=Math.PI*.15;arcG.add(arc);
+[0,.5,1].forEach(t=>{const d=new THREE.Mesh(new THREE.SphereGeometry(.07,16,16),new THREE.MeshBasicMaterial({color:0xffffff})),a=Math.PI*.15+t*Math.PI;d.position.set(Math.cos(a)*2.7,Math.sin(a)*2.7,0);arcG.add(d)});
+window.RISK={level:0,closes:null,ver:0,drag:false,rot:0};
+const gold=new THREE.MeshStandardMaterial({color:0xd9b46a,metalness:1,roughness:.28}),dial=new THREE.MeshStandardMaterial({color:0x2a0a10,metalness:.4,roughness:.35,emissive:0x1a0206});
+const watch=new THREE.Group(),W=new THREE.Group();watch.add(W);
+const bz=new THREE.Mesh(new THREE.TorusGeometry(1,.11,16,64),gold),cs=new THREE.Mesh(new THREE.CylinderGeometry(1,1,.3,64),gold),dl=new THREE.Mesh(new THREE.CircleGeometry(.9,64),dial);cs.rotation.x=Math.PI/2;dl.position.z=.16;W.add(bz,cs,dl);
+for(let i=0;i<12;i++){const a=i/12*Math.PI*2,m=new THREE.Mesh(new THREE.BoxGeometry(.05,i%3?.1:.2,.03),i%3?sil:red);m.position.set(Math.sin(a)*.78,Math.cos(a)*.78,.19);m.rotation.z=-a;W.add(m)}
+const hand=(w,l,mat)=>{const g=new THREE.Group(),m=new THREE.Mesh(new THREE.BoxGeometry(w,l,.03),mat);m.position.y=l/2-.08;g.add(m);g.position.z=.2;W.add(g);return g};
+const hMin=hand(.05,.7,sil),hRisk=hand(.07,.55,red);
+for(const sg of[1,-1])for(let i=0;i<5;i++){const l=new THREE.Mesh(new THREE.BoxGeometry(.78,.34,.16),gold);l.position.y=sg*(1.25+i*.38);l.position.z=-.02-i*.015;W.add(l)}
+sc.add(watch);watch.visible=true;
+const city=new THREE.Group(),bm=new THREE.MeshStandardMaterial({color:0xcfcac2,roughness:.7,metalness:.1,emissive:0x2a2118}),B=[];
+for(let x=0;x<16;x++)for(let z=0;z<5;z++){const m=new THREE.Mesh(new THREE.BoxGeometry(.5,1,.5),bm);m.position.set((x-7.5)*.8,0,(z-2)*.8);m.userData.x=x;B.push(m);city.add(m)}
+const gp=new THREE.Mesh(new THREE.PlaneGeometry(14,6),new THREE.MeshStandardMaterial({color:0x2a2c30,roughness:.9}));gp.rotation.x=-Math.PI/2;city.add(gp);
+city.position.set(0,-4.6,-1);city.rotation.x=.25;sc.add(city);city.scale.setScalar(.001);
+const wp={landing:[4.6,-2.5,.5],auth:[3.8,0,.9],upload:[-3.8,0,.8],dash:[-6.2,3.2,.4]};window.watchT={x:4.6,y:-2.5,s:.5};
+window.cityOn=false;
+hero.rotation.z=-.35;
+const n=700,base=new Float32Array(n*3),pos=new Float32Array(n*3),vel=new Float32Array(n*3),col=new Float32Array(n*3);
+for(let i=0;i<n;i++){base[i*3]=(Math.random()-.5)*28;base[i*3+1]=(Math.random()-.5)*16;base[i*3+2]=(Math.random()-.5)*8;pos.set(base.subarray(i*3,i*3+3),i*3);col.fill(.6,i*3,i*3+3)}
+const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(pos,3));pg.setAttribute('color',new THREE.BufferAttribute(col,3));
+sc.add(new THREE.Points(pg,new THREE.PointsMaterial({size:.07,vertexColors:true,transparent:true,opacity:.9})));
+const mo={x:0,y:0,on:false},mw=new THREE.Vector3(),v3=new THREE.Vector3();
+addEventListener('pointermove',e=>{mo.x=e.clientX/innerWidth*2-1;mo.y=-(e.clientY/innerHeight*2-1);mo.on=true});
+const rm=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function rs(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',rs);rs();
+(function f(){requestAnimationFrame(f);
+v3.set(mo.x,mo.y,.5).unproject(cam).sub(cam.position).normalize();mw.copy(cam.position).addScaledVector(v3,-cam.position.z/v3.z);
+for(let i=0;i<n;i++){const k=i*3,dx=pos[k]-mw.x,dy=pos[k+1]-mw.y,d2=dx*dx+dy*dy,hit=mo.on&&d2<5;
+if(hit){const F=(5-d2)*.012;vel[k]+=dx*F;vel[k+1]+=dy*F}
+for(let j=0;j<3;j++){vel[k+j]+=(base[k+j]-pos[k+j])*.012;vel[k+j]*=.9;pos[k+j]+=vel[k+j]}
+const tr=hit?1:.6,tg=hit?.17:.6,tb=hit?.24:.6;col[k]+=(tr-col[k])*.1;col[k+1]+=(tg-col[k+1])*.1;col[k+2]+=(tb-col[k+2])*.1}
+pg.attributes.position.needsUpdate=true;pg.attributes.color.needsUpdate=true;
+if(RISK.drag)hero.rotation.y+=(RISK.rot-hero.rotation.y)*.15;else if(!rm){hero.rotation.y+=.006}arcG.rotation.y=-hero.rotation.y*.5;
+const wt=window.watchT;watch.position.x+=(wt.x-watch.position.x)*.05;watch.position.y+=(wt.y-watch.position.y)*.05;watch.scale.setScalar(watch.scale.x+(wt.s-watch.scale.x)*.05);
+const tm=Date.now()/1000;hMin.rotation.z=-tm*.1;hRisk.rotation.z+=((-RISK.level*Math.PI*1.5)-hRisk.rotation.z)*.06;W.rotation.y=Math.sin(tm*.5)*.5+(rm?0:0);W.rotation.x=-mo.y*.3;
+const cs2=city.scale.x+((window.cityOn?1:.001)-city.scale.x)*.06;city.scale.setScalar(cs2);
+if(RISK.ver!==RISK.seen&&RISK.closes){RISK.seen=RISK.ver;const c=RISK.closes,mn=Math.min(...c),mx=Math.max(...c);B.forEach((m,i)=>{const k=Math.floor(m.userData.x/16*c.length),h=.3+((c[Math.min(c.length-1,k+Math.floor(i%5))]-mn)/(mx-mn||1))*3;m.userData.h=h});}
+B.forEach(m=>{const h=m.userData.h||.4;m.scale.y+=(h-m.scale.y)*.08;m.position.y=m.scale.y/2});
+hero.rotation.x+=((-mo.y*.4)-hero.rotation.x)*.05;
+const T=heroT;hero.position.x+=(T.x-hero.position.x)*.05;hero.position.y+=(T.y-hero.position.y)*.05;const sc2=hero.scale.x+(T.s-hero.scale.x)*.05;hero.scale.setScalar(sc2);
+cam.position.x+=(camT.x+mo.x*.6-cam.position.x)*.04;cam.position.y+=(camT.y+mo.y*.4-cam.position.y)*.04;cam.position.z+=(camT.z-cam.position.z)*.04;cam.lookAt(0,0,0);R.render(sc,cam)})()}catch(e){$('#gl').style.display='none'}})();
+
+const f=(v,d=2)=>Number(v).toLocaleString(undefined,{maximumFractionDigits:d});
+let mode='su',DS=[],cur=null,A=null,tmr=null;
+// ---- Auth
+const setMode=m=>{mode=m;$('#auth-t').textContent=m==='su'?'Sign up':'Log in';$('#auth-e').textContent=''};
+$('#t-su').onclick=()=>setMode('su');$('#t-li').onclick=()=>setMode('li');
+function authUI(){const b=$('#auth-btn');b.textContent=user?'Logout':'Login';b.onclick=user?async()=>{try{await api('/auth/logout',{method:'POST'})}catch(e){}user=null;DS=[];cur=null;authUI();go('landing')}:()=>go('auth')}
+$('#auth-go').onclick=async()=>{const er=$('#auth-e');er.textContent='';const email=$('#em').value.trim(),password=$('#pw').value;
+if(!/^\S+@\S+\.\S+$/.test(email))return er.textContent='Enter a valid email.';if(!password)return er.textContent='Enter a password.';
+try{const d=await api(mode==='su'?'/auth/signup':'/auth/login',{method:'POST',body:{email,password}});user=d.user;$('#pw').value='';authUI();const l=await api('/datasets');go(l.datasets.length?'dash':'upload')}catch(e){er.textContent=e.message}};
+// ---- Upload
+async function ingest(job){const pr=$('#prog'),pb=$('#pb'),st=$('#stage');$('#up-e').textContent='';$('#done').textContent='';pr.style.display='block';pb.parentElement.classList.add('ind');st.textContent='Uploading and validating on the server… (progress is indeterminate)';
+try{const d=(await job()).dataset;pb.parentElement.classList.remove('ind');pb.style.width='100%';st.textContent=`${d.rows} valid rows stored, ${d.rejected} rejected.`+(d.warnings.length?' '+d.warnings[0]:'');
+$('#done').textContent='Uploading and reading of data is complete';cur=d.id;await new Promise(r=>setTimeout(r,1200));pr.style.display='none';go('dash')}
+catch(e){pr.style.display='none';pb.parentElement.classList.remove('ind');$('#up-e').textContent='Failed: '+e.message+' Your previous data is unchanged. You can retry.'}}
+$('#file').onchange=e=>{const fl=e.target.files[0];if(!fl)return;if(!/\.csv$/i.test(fl.name))return $('#up-e').textContent='Only .csv files are supported.';if(fl.size>5e6)return $('#up-e').textContent='File exceeds 5 MB.';
+const r=new FileReader();r.onload=()=>ingest(()=>api('/datasets',{method:'POST',body:{name:fl.name,csv:r.result}}));r.onerror=()=>$('#up-e').textContent='Could not read file.';r.readAsText(fl);e.target.value=''};
+const demo=()=>{if(!user){go('auth');return}go('upload');ingest(()=>api('/datasets/demo',{method:'POST',body:{}}))};$('#demo-go').onclick=demo;$('#demo2').onclick=demo;
+// ---- Dashboard
+const params=()=>{const p={atr:$('#atrN').value,mult:$('#mult').value,dir:$('#dir').value,conf:$('#conf').value,risk:$('#rk').value,kellyFrac:$('#kf').value};if($('#en').value)p.entry=$('#en').value;return p};
+async function loadDash(){try{$('#derr').textContent='';DS=(await api('/datasets')).datasets;$('#dash-empty').style.display=DS.length?'none':'block';$('#dash-body').style.display=DS.length?'block':'none';if(!DS.length)return;
+if(!DS.find(d=>d.id===cur))cur=DS[0].id;const sel=$('#ds');sel.textContent='';DS.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=(d.isDemo?'[DEMO] ':'')+d.name;sel.appendChild(o)});sel.value=cur;
+const st=await api('/settings');$('#eq').value=st.equity;$('#lim').value=st.dailyLossPct;await refresh()}catch(e){if(e.status===401){user=null;authUI();go('auth')}else $('#derr').textContent=e.message}}
+async function refresh(){try{$('#derr').textContent='';const q=new URLSearchParams(params()).toString();A=await api('/datasets/'+cur+'/analysis?'+q);render();await Promise.all([riskUI(),logUI()])}catch(e){$('#derr').textContent=e.message;$('#metrics').textContent='';$('#sz').textContent=''}}
+const deb=()=>{clearTimeout(tmr);tmr=setTimeout(refresh,300)};
+['atrN','mult','dir','conf','rk','en','kf'].forEach(i=>$('#'+i).oninput=deb);
+$('#ds').onchange=e=>{cur=+e.target.value;$('#en').value='';refresh()};
+['eq','lim'].forEach(i=>$('#'+i).onchange=async()=>{try{await api('/settings',{method:'PUT',body:{equity:+$('#eq').value,dailyLossPct:+$('#lim').value}});$('#dmsg').textContent='Settings saved.';refresh()}catch(e){$('#derr').textContent=e.message}});
+function render(){const d=A.dataset,k=A.kelly,n=A.params.atr;
+$('#src').textContent=(d.isDemo?'DEMO DATA — ':'')+d.name+' · '+d.rows+' valid rows · '+d.rejected+' rejected · '+d.from+' to '+d.to;$('#warn').textContent=d.warnings.join(' ');
+const M=[['Last close',f(A.last)],['ATR('+n+', Wilder)',f(A.atr,4)],['Stop distance',f(A.stopDistance,4)],['Stop price ('+A.params.dir+')',f(A.stop)],['Hist. VaR '+A.var.confidence*100+'% (1-day)',f(A.var.fractionLoss*100)+'%'],['Max drawdown',f(A.drawdown*100)+'%'],['Win rate',k.valid?f(k.p*100)+'%':'n/a'],['Kelly (full)',k.valid?f(k.kelly*100)+'%':'n/a']];
+$('#metrics').textContent='';M.forEach(m=>{const c=document.createElement('div');c.className='card m';const s=document.createElement('small');s.textContent=m[0];c.append(s,m[1]);$('#metrics').appendChild(c)});
+const z=A.sizing,sz=$('#sz');sz.textContent='';const add=t=>{const p=document.createElement('p');p.innerHTML=t;sz.appendChild(p)};
+add(`Equity ${f(A.params.equity)} · risk ${A.params.risk}% → allowed risk <b>${f(z.riskAmount)}</b><br>Entry ${f(A.params.entry)} · stop ${f(A.stop)} · distance ${f(z.distance,4)}<br>Position size: <b>${f(z.size,4)}</b> units · est. risk <b>${f(z.estRisk)}</b>`);
+add(k.valid?`Kelly ${f(k.kelly*100)}% (n=${k.n}, p=${f(k.p,3)}, win/loss ratio b=${f(k.b,3)}) → suggested ${f(k.allocation*100)}% of equity at ${k.fraction*100}% Kelly.${k.reason?' '+k.reason:''}<br><small>Full Kelly is very volatile; fractional Kelly is safer.</small>`:'Kelly unavailable: '+k.reason);
+add(`<small>VaR ${A.var.confidence*100}%: est. 1-day loss ${f(A.var.estLoss)} on equity (n=${A.var.observations}, ${A.var.lookback}). ${A.var.method}. Not a maximum loss; changing markets and tail events can exceed it. Sizing assumes point value 1 and no FX conversion.</small>`);
+chart(A.closes);RISK.closes=A.closes.slice(-64).filter((_,i,a)=>i%Math.ceil(a.length/16/1)===0||true);RISK.ver++}
+function chart(v){const c=$('#c1'),w=c.width=c.clientWidth*devicePixelRatio,h=c.height=170*devicePixelRatio,g=c.getContext('2d'),mn=Math.min(...v),mx=Math.max(...v);g.clearRect(0,0,w,h);g.strokeStyle='#ff4d5a';g.lineWidth=2*devicePixelRatio;g.beginPath();v.forEach((y,i)=>{const X=i/(v.length-1)*w,Y=h-(y-mn)/(mx-mn||1)*(h-10)-5;i?g.lineTo(X,Y):g.moveTo(X,Y)});g.stroke()}
+addEventListener('resize',()=>{if(A&&$('#dash').classList.contains('on'))chart(A.closes)});
+$('#save').onclick=async()=>{try{await api('/datasets/'+cur+'/analysis',{method:'POST',body:params()});$('#dmsg').textContent='Analysis saved.';logUI()}catch(e){$('#dmsg').textContent='';$('#derr').textContent=e.message}};
+$('#del').onclick=async()=>{if(!confirm('Delete this dataset and its data?'))return;try{await api('/datasets/'+cur,{method:'DELETE'});cur=null;loadDash()}catch(e){$('#derr').textContent=e.message}};
+// ---- Kill switch (backend-enforced)
+async function riskUI(){const R=await api('/risk');$('#ks').innerHTML='';const a=document.createElement('span');a.textContent=`Today (${R.day}) P&L: ${f(R.pnl)} · Limit: -${f(R.limit)} · Status: `;const b=document.createElement('b');b.className=R.triggered?'err':'ok';b.textContent=R.triggered?'TRIGGERED — new simulated trades blocked':'Active — trading allowed';$('#ks').append(a,b);$('#trade').disabled=false;RISK.level=R.triggered?1:Math.max(0,Math.min(1,-R.pnl/(R.limit||1)))}
+$('#trade').onclick=async()=>{const p=+$('#pnl').value;if(!isFinite(p))return;try{await api('/trades',{method:'POST',body:{pnl:p}});$('#derr').textContent=''}catch(e){$('#derr').textContent=e.message}await riskUI();logUI()};
+$('#reset').onclick=async()=>{if(prompt('Type RESET to clear the kill switch flag (day P&L is kept; it re-triggers on the next trade unless the limit is raised)')!=='RESET')return;try{await api('/risk/reset',{method:'POST',body:{confirm:'RESET'}});$('#derr').textContent=''}catch(e){$('#derr').textContent=e.message}await riskUI();logUI()};
+async function logUI(){const {activity}=await api('/activity'),t=$('#log');t.textContent='';const h=t.insertRow();['Time','Event'].forEach(x=>{const c=document.createElement('th');c.textContent=x;h.appendChild(c)});
+activity.forEach(e=>{const r=t.insertRow();r.insertCell().textContent=e.created_at;r.insertCell().textContent=e.action+(e.detail?': '+e.detail:'')})}
+$('#rot').oninput=e=>{RISK.drag=true;RISK.rot=e.target.value/180*Math.PI;$('#degv').textContent=e.target.value+'°'};$('#autoSpin').onclick=()=>{RISK.drag=false;$('#degv').textContent='180°'};
+$('#sizing-host').append($('#rk').closest('.card'));$('#kill-host').append($('#trade').closest('.card'));$('#act-host').append($('#log').closest('.card'));
+// ---- Boot: restore session
+(async()=>{try{const d=await api('/auth/me');user=d.user}catch(e){}authUI();const h=location.hash.slice(1);go(cams[h]?h:'landing')})();
+</script></body></html>
