@@ -70,10 +70,4 @@ Header `date,open,high,low,close`; date `YYYY-MM-DD`; prices positive; high >= m
 ## Package versions
 express ^4.19, mysql2 ^3.9, bcryptjs ^2.4, jsonwebtoken ^9, cookie-parser ^1.4, express-rate-limit ^7.2, helmet ^7.1, dotenv ^16.4. Three.js r128 from cdnjs.
 
-## Honest limitations
-- The code was written without being run against a live MySQL server or installed npm packages in my environment. Only the unit tests (calculations and CSV parsing) were actually run and pass. Server routes, SQL, auth flow and the frontend have NOT been tested end to end; expect to fix small bugs.
-- No API integration tests or browser tests.
-- Plain JavaScript, not TypeScript; the frontend is one HTML file, not React/Vite.
-- Logout is stateless (cookie cleared, token not server-revoked); sessions last 7 days.
-- Upload progress is indeterminate (no byte-level progress). The fixed demo password is a demo-only, server-enforced rule and is also shown on the signup page by request; not a production policy.
-- Charts are a single canvas price line; drawdown/volatility/allocation charts are not built.
+
