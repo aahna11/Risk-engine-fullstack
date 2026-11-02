@@ -18,6 +18,7 @@ const setCookie = (res, uid) => res.cookie('token', jwt.sign({ uid }, JWT_SECRET
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", 'data:'], connectSrc: ["'self'"], workerSrc: ["'self'", 'blob:'] } } }));
 app.use(express.json({ limit: '6mb' }));
 app.use(cookieParser());
@@ -200,3 +201,4 @@ app.use((err, req, res, next) => { // eslint-disable-line
 });
 const port = +process.env.PORT || 3000;
 app.listen(port, () => console.log(`Risk Engine running at http://localhost:${port}`));
+module.exports = app;
