@@ -1,3 +1,5 @@
+*Live demo:* https://your-url.vercel.app 
+    
 # Risk & Position Sizing Engine (full-stack)
 
 Node.js + Express backend, MySQL database, and a Three.js 3D frontend (procedural coins, 3D watch risk gauge, market-skyline city, rotate slider) served by Express from `public/`.
